@@ -11,8 +11,8 @@ import asyncio
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Bot credentials
-TOKEN = '8465346144:AAguH15Y1K0TKQv8yTI-UNUIDBviyV65Co0'
+# ✅ Your new working bot token
+TOKEN = '8465346144:AAGSHC77UkXVZZTUscbYItvJxgQbBxmFcWo'
 GROUP_USERNAME = '@hathipandaa'
 
 # Flask app
