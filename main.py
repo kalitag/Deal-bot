@@ -9,20 +9,18 @@ from telegram.ext import (
 )
 from bs4 import BeautifulSoup
 
-# --- Logging setup
 logging.basicConfig(level=logging.INFO)
 
-# --- Bot configuration: Update RENDER_URL to your actual Render service!
+# --- Bot configuration
 BOT_TOKEN = "8465346144:AAGSHC77UkXVZZTUscbYItvJxgQbBxmFcWo"
 WEBHOOK_PATH = f"/{BOT_TOKEN}"
-RENDER_URL = "https://deal-bot-4g3a.onrender.com"  # <--- Confirm this matches your Render dashboard!
+RENDER_URL = "https://deal-bot-4g3a.onrender.com"  # <-- Make sure this matches your Render dashboard!
 WEBHOOK_URL = f"{RENDER_URL}{WEBHOOK_PATH}"
 
 app = Flask(__name__)
 bot = Bot(BOT_TOKEN)
 application = ApplicationBuilder().token(BOT_TOKEN).build()
 
-# --- Helper functions (customize as needed)
 SHORTENERS = [
     "cutt.ly", "spoo.me", "amzn-to.co", "fkrt.cc", "bitli.in", "da.gd", "wishlink.com"
 ]
@@ -131,7 +129,6 @@ def extract_product_info(url, title_hint=None):
         logging.error(f"Product info error: {e}")
         return None, None, [], ""
 
-# --- Telegram handler
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.message
     if not msg:
@@ -181,19 +178,17 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 application.add_handler(MessageHandler(filters.TEXT, handle_text))
 
-# --- Webhook endpoint
 @app.route(WEBHOOK_PATH, methods=["POST"])
 def telegram_webhook():
     logging.info("Webhook called! Incoming update: %s", request.get_json(force=True))
     try:
         data = request.get_json(force=True)
         update = Update.de_json(data, bot)
-        application.process_update(update)  # Synchronous call
+        application.process_update(update)  # Synchronous call, correct for Flask!
     except Exception as e:
         logging.error(f"Webhook error: {e}")
     return "OK", 200
 
-# --- Health endpoint
 @app.route("/", methods=["GET"])
 def health():
     return "Deal-bot is running.", 200
