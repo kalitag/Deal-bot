@@ -169,6 +169,10 @@ application.add_handler(MessageHandler(filters.TEXT, handle_text))
 
 @app.route(f"/{BOT_TOKEN}", methods=["POST"])
 def telegram_webhook():
+    @app.route(f"/{BOT_TOKEN}", methods=["POST"])
+def telegram_webhook():
+    print("Webhook called!")
+    # ... rest of code ...
     update = Update.de_json(request.get_json(force=True), bot)
     asyncio.run(application.process_update(update))
     return "OK", 200
