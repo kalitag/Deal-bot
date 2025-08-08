@@ -210,10 +210,13 @@ def health():
     return "Deal-bot is running.", 200
 
 # --- Main Execution
+import logging
+logging.basicConfig(level=logging.INFO)
+
 if __name__ == "__main__":
     try:
-        bot.set_webhook(WEBHOOK_URL)
-        logging.info(f"Webhook set to {WEBHOOK_URL}")
+        bot.set_webhook(WEBHOOK_URL)  # Synchronous call, no asyncio.run()
+        logging.info(f"Webhook successfully set to {WEBHOOK_URL}")
     except Exception as e:
-        logging.error(f"Webhook setup failed: {e}")
+        logging.error(f"Failed to set webhook: {e}")
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
