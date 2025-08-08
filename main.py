@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 TOKEN = '8465346144:AAguH15Y1K0TKQv8yTI-UNUIDBviyV65Co0'
 GROUP_USERNAME = '@hathipandaa'
 
-# Dummy Flask app for Render
+# Flask app for Render
 app_web = Flask(__name__)
 
 @app_web.route('/')
