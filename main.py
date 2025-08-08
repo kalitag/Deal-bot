@@ -196,7 +196,8 @@ def health():
 # --- Entrypoint ---
 if __name__ == "__main__":
     try:
-        bot.set_webhook(WEBHOOK_URL)
+        import asyncio
+        asyncio.run(bot.set_webhook(WEBHOOK_URL))
         print(f"Webhook set to {WEBHOOK_URL}")
     except Exception as e:
         print(f"Webhook setup failed: {e}")
