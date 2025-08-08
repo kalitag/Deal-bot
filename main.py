@@ -5,23 +5,21 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import logging
+import asyncio
 
 # Enable logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Bot token and group
 TOKEN = '8465346144:AAguH15Y1K0TKQv8yTI-UNUIDBviyV65Co0'
 GROUP_USERNAME = '@hathipandaa'
 
-# Flask app for Render
 app_web = Flask(__name__)
 
 @app_web.route('/')
 def home():
     return "Bot is running"
 
-# Unshorten links
 def unshorten_link(url):
     try:
         response = requests.get(url, timeout=5, allow_redirects=True)
@@ -30,7 +28,6 @@ def unshorten_link(url):
         logger.error(f"Error unshortening link: {e}")
         return url
 
-# Scrape product info
 def extract_product_info(url):
     try:
         headers = {'User-Agent': 'Mozilla/5.0'}
@@ -38,7 +35,6 @@ def extract_product_info(url):
         soup = BeautifulSoup(response.text, 'html.parser')
 
         title = soup.find('title').text.strip()
-
         price_tag = soup.find('span', string=re.compile(r'₹\d+'))
         price = price_tag.text.strip() if price_tag else "price"
 
@@ -52,7 +48,6 @@ def extract_product_info(url):
         logger.error(f"Error scraping product info: {e}")
         return None, None, []
 
-# Format message
 def format_deal(message_text):
     urls = re.findall(r'https?://\S+', message_text)
     if not urls:
@@ -66,10 +61,8 @@ def format_deal(message_text):
         return None
 
     size_line = "Available Sizes: " + ", ".join(sizes) if sizes else "Available Sizes: Not listed"
-
     return f"{title} @{price} rs\n{full_url}\n\n{size_line}\n\n@reviewcheckk"
 
-# Handle forwarded messages
 async def handle_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.message.text
     logger.info(f"Received message: {msg}")
@@ -80,15 +73,16 @@ async def handle_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             logger.info("No formatted message generated.")
 
-# Start bot polling
-def run_bot():
+async def run_bot():
     logger.info("Starting Telegram polling...")
     bot_app = ApplicationBuilder().token(TOKEN).build()
     bot_app.add_handler(MessageHandler(filters.FORWARDED & filters.TEXT, handle_forward))
-    bot_app.run_polling()
+    await bot_app.initialize()
+    await bot_app.start()
+    await bot_app.updater.start_polling()
+    await bot_app.updater.idle()
 
-# Run both Flask and bot
 if __name__ == '__main__':
-    import threading
-    threading.Thread(target=run_bot).start()
+    loop = asyncio.get_event_loop()
+    loop.create_task(run_bot())
     app_web.run(host='0.0.0.0', port=10000)
