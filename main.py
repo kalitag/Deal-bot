@@ -191,17 +191,16 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 application.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_text))
 
 # --- Webhook Endpoint
-@app.route(WEBHOOK_PATH, methods=["POST"])
+@app.route(f"/{BOT_TOKEN}", methods=["POST"])  # Adjust path as needed
 def telegram_webhook():
-    """Handle incoming Telegram updates via webhook."""
-    logging.info("Webhook called! Incoming update: %s", request.get_json(force=True))
+    logging.info("Webhook received an update!")
     try:
-        data = request.get_json(force=True)
-        update = Update.de_json(data, bot)
+        update = Update.de_json(request.get_json(force=True), bot)
         application.process_update(update)  # Synchronous call
+        return "OK", 200
     except Exception as e:
-        logging.error(f"Webhook error: {e}")
-    return "OK", 200
+        logging.error(f"Webhook processing failed: {e}")
+        return "Error", 500
 
 # --- Health Endpoint
 @app.route("/", methods=["GET"])
