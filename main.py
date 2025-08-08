@@ -9,9 +9,13 @@ from telegram.ext import (
 from bs4 import BeautifulSoup
 import asyncio
 
+# --- Bot configuration ---
 BOT_TOKEN = "8465346144:AAGSHC77UkXVZZTUscbYItvJxgQbBxmFcWo"
-WEBHOOK_URL = f"https://deal-bot-255c.onrender.com/{BOT_TOKEN}"
+WEBHOOK_PATH = f"/{BOT_TOKEN}"
+RENDER_URL = "https://deal-bot-255c.onrender.com"
+WEBHOOK_URL = f"{RENDER_URL}{WEBHOOK_PATH}"
 
+# --- Constants ---
 SHORTENERS = [
     "cutt.ly", "spoo.me", "amzn-to.co", "fkrt.cc", "bitli.in", "da.gd", "wishlink.com"
 ]
@@ -20,10 +24,12 @@ AFFILIATE_TAGS = [
 ]
 SIZE_LABELS = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"]
 
+# --- Flask & Telegram setup ---
 app = Flask(__name__)
 bot = Bot(BOT_TOKEN)
 application = ApplicationBuilder().token(BOT_TOKEN).build()
 
+# --- Helper functions ---
 def unshorten_link(url):
     try:
         for s in SHORTENERS:
@@ -31,7 +37,8 @@ def unshorten_link(url):
                 resp = requests.head(url, allow_redirects=True, timeout=5)
                 return resp.url
         return url
-    except Exception:
+    except Exception as e:
+        print(f"Unshorten error: {e}")
         return url
 
 def strip_affiliate(url):
@@ -119,9 +126,11 @@ def extract_product_info(url, title_hint=None):
         sizes = extract_sizes(soup, page_text)
 
         return title, price, sizes, page_text
-    except Exception:
+    except Exception as e:
+        print(f"Product info error: {e}")
         return None, None, [], ""
 
+# --- Telegram handler ---
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.message
     if not msg:
@@ -167,20 +176,28 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 application.add_handler(MessageHandler(filters.TEXT, handle_text))
 
-@app.route(f"/{BOT_TOKEN}", methods=["POST"])
+# --- Webhook endpoint ---
+@app.route(WEBHOOK_PATH, methods=["POST"])
 def telegram_webhook():
-    @app.route(f"/{BOT_TOKEN}", methods=["POST"])
-def telegram_webhook():
-    print("Webhook called!")
-    # ... rest of code ...
-    update = Update.de_json(request.get_json(force=True), bot)
-    asyncio.run(application.process_update(update))
-    return "OK", 200
+    print("Webhook called! Incoming update:", request.get_json(force=True))
+    try:
+        data = request.get_json(force=True)
+        update = Update.de_json(data, bot)
+        asyncio.run(application.process_update(update))
+    except Exception as e:
+        print("Webhook error:", e)
+    return "ok"
 
+# --- Health endpoint ---
 @app.route("/", methods=["GET"])
-def home():
+def health():
     return "Deal-bot is running.", 200
 
+# --- Entrypoint ---
 if __name__ == "__main__":
-    bot.set_webhook(WEBHOOK_URL)
+    try:
+        bot.set_webhook(WEBHOOK_URL)
+        print(f"Webhook set to {WEBHOOK_URL}")
+    except Exception as e:
+        print(f"Webhook setup failed: {e}")
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
