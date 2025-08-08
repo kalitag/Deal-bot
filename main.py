@@ -1,20 +1,20 @@
-from telegram import Update
-from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
-from flask import Flask
-import requests
-from bs4 import BeautifulSoup
-import re
 import logging
-import asyncio
 import os
 import threading
+import requests
+from flask import Flask
+from telegram import Update
+from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
+from bs4 import BeautifulSoup
+import re
+import asyncio
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# ✅ Correct bot token
-   TOKEN = '8465346144:AAGSHC77UkXVZZTUscbYItvJxgQbBxmFcWo'
+# ✅ Correct bot token — no quotes, no indent errors
+TOKEN = '8465346144:AAGSHC77UkXVZZTUscbYItvJxgQbBxmFcWo'
 GROUP_USERNAME = '@hathipandaa'
 
 # Flask app
