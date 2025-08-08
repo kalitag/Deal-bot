@@ -6,13 +6,14 @@ from bs4 import BeautifulSoup
 import re
 import logging
 import asyncio
+import os
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# ✅ Your new working bot token
-   TOKEN = '8465346144:AAGSHC77UkXVZZTUscbYItvJxgQbBxmFcWo'
+# ✅ Correct bot token
+TOKEN = '8465346144:AAGSHC77UkXVZZTUscbYItvJxgQbBxmFcWo'
 GROUP_USERNAME = '@hathipandaa'
 
 # Flask app
@@ -79,5 +80,6 @@ async def run_bot():
 
 # Entry point
 if __name__ == '__main__':
-    asyncio.run(run_bot())
-    app_web.run(host='0.0.0.0', port=10000)
+    threading.Thread(target=lambda: asyncio.run(run_bot())).start()
+    port = int(os.environ.get("PORT", 10000))
+    app_web.run(host='0.0.0.0', port=port)
