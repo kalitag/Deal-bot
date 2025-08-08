@@ -1,5 +1,6 @@
 import os
 import re
+import logging
 import requests
 from flask import Flask, request
 from telegram import Update, Bot, Message
@@ -9,13 +10,16 @@ from telegram.ext import (
 from bs4 import BeautifulSoup
 import asyncio
 
-# --- Bot configuration ---
+# Logging for debugging and production
+logging.basicConfig(level=logging.INFO)
+
+# --- Bot configuration
 BOT_TOKEN = "8465346144:AAGSHC77UkXVZZTUscbYItvJxgQbBxmFcWo"
 WEBHOOK_PATH = f"/{BOT_TOKEN}"
 RENDER_URL = "https://deal-bot-255c.onrender.com"
 WEBHOOK_URL = f"{RENDER_URL}{WEBHOOK_PATH}"
 
-# --- Constants ---
+# --- Helpers
 SHORTENERS = [
     "cutt.ly", "spoo.me", "amzn-to.co", "fkrt.cc", "bitli.in", "da.gd", "wishlink.com"
 ]
@@ -24,12 +28,10 @@ AFFILIATE_TAGS = [
 ]
 SIZE_LABELS = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"]
 
-# --- Flask & Telegram setup ---
 app = Flask(__name__)
 bot = Bot(BOT_TOKEN)
 application = ApplicationBuilder().token(BOT_TOKEN).build()
 
-# --- Helper functions ---
 def unshorten_link(url):
     try:
         for s in SHORTENERS:
@@ -38,7 +40,7 @@ def unshorten_link(url):
                 return resp.url
         return url
     except Exception as e:
-        print(f"Unshorten error: {e}")
+        logging.warning(f"Unshorten error: {e}")
         return url
 
 def strip_affiliate(url):
@@ -127,78 +129,80 @@ def extract_product_info(url, title_hint=None):
 
         return title, price, sizes, page_text
     except Exception as e:
-        print(f"Product info error: {e}")
+        logging.error(f"Product info error: {e}")
         return None, None, [], ""
 
-# --- Telegram handler ---
+# --- Telegram handler
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.message
     if not msg:
         return
 
-    title_hint = get_caption_or_alt(update)
-    urls = re.findall(r'https?://\S+', msg.text or (title_hint or ""))
-    if not urls:
-        await msg.reply_text("⚠️ No product link detected.")
-        return
+    try:
+        title_hint = get_caption_or_alt(update)
+        urls = re.findall(r'https?://\S+', msg.text or (title_hint or ""))
+        if not urls:
+            await msg.reply_text("⚠️ No product link detected.")
+            return
 
-    raw_url = urls[0]
-    unshort = unshorten_link(raw_url)
-    clean_url = strip_affiliate(unshort)
+        raw_url = urls[0]
+        unshort = unshorten_link(raw_url)
+        clean_url = strip_affiliate(unshort)
 
-    title, price, sizes, page_text = extract_product_info(clean_url, title_hint=title_hint)
+        title, price, sizes, page_text = extract_product_info(clean_url, title_hint=title_hint)
 
-    if not title or not price:
-        if title_hint:
-            await msg.reply_text(f"🖼️ {title_hint}\n❌ Unable to extract product info.")
-        else:
-            await msg.reply_text("❌ Unable to extract product info.")
-        return
+        if not title or not price:
+            if title_hint:
+                await msg.reply_text(f"🖼️ {title_hint}\n❌ Unable to extract product info.")
+            else:
+                await msg.reply_text("❌ Unable to extract product info.")
+            return
 
-    gender = detect_gender(title)
-    quantity = detect_quantity(title)
-    size_line = ""
-    if sizes:
-        size_line = "Size - All" if len(sizes) >= 4 else "Size - " + ", ".join(sizes)
-    pin_line = detect_pin(msg.text, page_text, clean_url)
+        gender = detect_gender(title)
+        quantity = detect_quantity(title)
+        size_line = ""
+        if sizes:
+            size_line = "Size - All" if len(sizes) >= 4 else "Size - " + ", ".join(sizes)
+        pin_line = detect_pin(msg.text, page_text, clean_url)
 
-    formatted = f"{gender} {quantity} {title} @{price} rs\n{clean_url}"
-    if size_line:
-        formatted += f"\n\n{size_line}"
-    if pin_line:
-        formatted += f"\n{pin_line}"
-    formatted += "\n\n@reviewcheckk"
+        formatted = f"{gender} {quantity} {title} @{price} rs\n{clean_url}"
+        if size_line:
+            formatted += f"\n\n{size_line}"
+        if pin_line:
+            formatted += f"\n{pin_line}"
+        formatted += "\n\n@reviewcheckk"
 
-    formatted = re.sub(r"\s+", " ", formatted)
-    formatted = formatted.replace("₹", "").replace("Rs", "")
-    formatted = formatted.replace(" @ rs", "")
-    await msg.reply_text(formatted)
+        formatted = re.sub(r"\s+", " ", formatted)
+        formatted = formatted.replace("₹", "").replace("Rs", "")
+        formatted = formatted.replace(" @ rs", "")
+        await msg.reply_text(formatted)
+    except Exception as e:
+        logging.error(f"Error in handle_text: {e}")
+        await msg.reply_text("Sorry, something went wrong.")
 
 application.add_handler(MessageHandler(filters.TEXT, handle_text))
 
-# --- Webhook endpoint ---
+# --- Webhook endpoint
 @app.route(WEBHOOK_PATH, methods=["POST"])
 def telegram_webhook():
-    print("Webhook called! Incoming update:", request.get_json(force=True))
+    logging.info("Webhook called! Incoming update: %s", request.get_json(force=True))
     try:
         data = request.get_json(force=True)
         update = Update.de_json(data, bot)
         asyncio.run(application.process_update(update))
     except Exception as e:
-        print("Webhook error:", e)
-    return "ok"
+        logging.error(f"Webhook error: {e}")
+    return "OK", 200
 
-# --- Health endpoint ---
+# --- Health endpoint
 @app.route("/", methods=["GET"])
 def health():
     return "Deal-bot is running.", 200
 
-# --- Entrypoint ---
 if __name__ == "__main__":
     try:
-        import asyncio
         asyncio.run(bot.set_webhook(WEBHOOK_URL))
-        print(f"Webhook set to {WEBHOOK_URL}")
+        logging.info(f"Webhook set to {WEBHOOK_URL}")
     except Exception as e:
-        print(f"Webhook setup failed: {e}")
+        logging.error(f"Webhook setup failed: {e}")
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
