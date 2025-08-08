@@ -11,6 +11,7 @@ import asyncio
 
 BOT_TOKEN = "8465346144:AAGSHC77UkXVZZTUscbYItvJxgQbBxmFcWo"
 WEBHOOK_URL = f"https://deal-bot-255c.onrender.com/{BOT_TOKEN}"
+
 SHORTENERS = [
     "cutt.ly", "spoo.me", "amzn-to.co", "fkrt.cc", "bitli.in", "da.gd", "wishlink.com"
 ]
