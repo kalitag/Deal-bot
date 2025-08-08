@@ -79,6 +79,5 @@ async def run_bot():
 
 # Entry point
 if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    loop.create_task(run_bot())
+    asyncio.run(run_bot())
     app_web.run(host='0.0.0.0', port=10000)
