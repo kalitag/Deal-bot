@@ -19,7 +19,7 @@ WEBHOOK_URL = f"{RENDER_URL}{WEBHOOK_PATH}"
 # --- Constants for Link Handling and Scraping
 SHORTENERS = ["cutt.ly", "spoo.me", "amzn-to.co", "fkrt.cc", "bitli.in", "da.gd", "wishlink.com"]
 AFFILIATE_TAGS = ["tag=", "affid=", "utm_", "ref=", "linkCode=", "ascsubtag=", "affsource=", "affExtParam1="]
-SIZE_LABELS = ["S", "M", "L", "XL", "XXL"]
+SIZE_LABELS = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"]
 GENDER_KEYWORDS = ["men", "women", "kids", "unisex"]
 QUANTITY_PATTERNS = [
     r"(pack of \d+)", r"(set of \d+)", r"(\d+\s?pcs)", r"(\d+\s?kg)", r"(\d+\s?ml)", r"(\d+\s?g)", r"(quantity \d+)"
@@ -91,13 +91,16 @@ def extract_price(page_text):
     match = re.search(r"(?:₹|Rs)[\s]?(?P<price>\d{2,7})", page_text)
     return match.group("price") if match else None
 
-def extract_sizes(soup):
-    """Extract available sizes from <span> tags."""
+def extract_sizes(soup, page_text):
+    """Extract available sizes from <span> tags or text."""
     sizes = set()
     for span in soup.find_all("span"):
         txt = span.get_text(strip=True)
         if txt in SIZE_LABELS:
             sizes.add(txt)
+    for label in SIZE_LABELS:
+        if re.search(fr"\b{label}\b", page_text):
+            sizes.add(label)
     return sorted(list(sizes))
 
 def detect_pin(msg_text, page_text, url):
@@ -132,7 +135,7 @@ def extract_product_info(url, title_hint=None):
         title = clean_title(title)
 
         price = extract_price(page_text)
-        sizes = extract_sizes(soup)
+        sizes = extract_sizes(soup, page_text)
 
         return title, price, sizes, page_text
     except Exception as e:
@@ -171,7 +174,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         quantity = detect_quantity(title)
         size_line = ""
         if sizes:
-            size_line = "Size - All" if len(sizes) == len(SIZE_LABELS) else f"Size - {', '.join(sizes)}"
+            size_line = "Size - All" if len(sizes) >= len(SIZE_LABELS) else f"Size - {', '.join(sizes)}"
         pin_line = detect_pin(text_source, page_text, clean_url)
 
         formatted = f"{gender} {quantity} {title} @{price} rs\n{clean_url}"
@@ -182,25 +185,27 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         formatted += "\n\n@reviewcheckk"
 
         formatted = re.sub(r"\s+", " ", formatted).strip()
+        formatted = formatted.replace("₹", "").replace("Rs", "").replace(" @ rs", "")
         await msg.reply_text(formatted)
     except Exception as e:
         logging.error(f"Error in handle_text: {e}")
         await msg.reply_text("Sorry, something went wrong.")
 
-# Register the message handler
+# Register the message handler for text and photo messages
 application.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_text))
 
 # --- Webhook Endpoint
-@app.route(f"/{BOT_TOKEN}", methods=["POST"])  # Adjust path as needed
+@app.route(WEBHOOK_PATH, methods=["POST"])
 def telegram_webhook():
-    logging.info("Webhook received an update!")
+    """Handle incoming Telegram updates via webhook."""
+    logging.info("Webhook called! Incoming update: %s", request.get_json(force=True))
     try:
-        update = Update.de_json(request.get_json(force=True), bot)
+        data = request.get_json(force=True)
+        update = Update.de_json(data, bot)
         application.process_update(update)  # Synchronous call
-        return "OK", 200
     except Exception as e:
-        logging.error(f"Webhook processing failed: {e}")
-        return "Error", 500
+        logging.error(f"Webhook error: {e}")
+    return "OK", 200
 
 # --- Health Endpoint
 @app.route("/", methods=["GET"])
@@ -209,13 +214,10 @@ def health():
     return "Deal-bot is running.", 200
 
 # --- Main Execution
-import logging
-logging.basicConfig(level=logging.INFO)
-
 if __name__ == "__main__":
     try:
-        bot.set_webhook(WEBHOOK_URL)  # Synchronous call, no asyncio.run()
-        logging.info(f"Webhook successfully set to {WEBHOOK_URL}")
+        bot.set_webhook(WEBHOOK_URL)
+        logging.info(f"Webhook set to {WEBHOOK_URL}")
     except Exception as e:
-        logging.error(f"Failed to set webhook: {e}")
+        logging.error(f"Webhook setup failed: {e}")
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
