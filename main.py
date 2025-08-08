@@ -200,6 +200,8 @@ def home():
 if __name__ == "__main__":
     # Set webhook on start (idempotent)
     bot.set_webhook(WEBHOOK_URL)
+    if __name__ == "__main__":
+    bot.set_webhook(WEBHOOK_URL)
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000))) flask import Flask, request
 from telegram import Update, Bot
 from telegram.ext import (
