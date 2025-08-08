@@ -1,11 +1,9 @@
 import os
 import re
 import logging
-import requests
 from flask import Flask, request
 from telegram import Update, Bot
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
-from bs4 import BeautifulSoup
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -13,61 +11,13 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # --- Bot Configuration
 BOT_TOKEN = "8465346144:AAGSHC77UkXVZZTUscbYItvJxgQbBxmFcWo"
 WEBHOOK_PATH = f"/{BOT_TOKEN}"
-RENDER_URL = "https://deal-bot-4g3a.onrender.com"  # Confirm this
+RENDER_URL = "https://deal-bot-4g3a.onrender.com"
 WEBHOOK_URL = f"{RENDER_URL}{WEBHOOK_PATH}"
-
-# --- Constants
-SHORTENERS = ["cutt.ly", "spoo.me", "amzn-to.co", "fkrt.cc", "bitli.in", "da.gd", "wishlink.com"]
-AFFILIATE_TAGS = ["tag=", "affid=", "utm_", "ref=", "linkCode=", "ascsubtag=", "affsource=", "affExtParam1="]
-SIZE_LABELS = ["XS", "S", "M", "L", "XL", "XXL", "XXXL"]
-GENDER_KEYWORDS = ["men", "women", "kids", "unisex"]
-QUANTITY_PATTERNS = [r"(pack of \d+)", r"(set of \d+)", r"(\d+\s?pcs)", r"(\d+\s?kg)", r"(\d+\s?ml)", r"(\d+\s?g)", r"(quantity \d+)"]
 
 # Initialize Flask and Telegram bot
 app = Flask(__name__)
 bot = Bot(BOT_TOKEN)
 application = ApplicationBuilder().token(BOT_TOKEN).build()
-
-# --- Helper Functions (simplified for stability)
-def unshorten_link(url):
-    try:
-        resp = requests.head(url, allow_redirects=True, timeout=5)
-        return resp.url
-    except requests.RequestException:
-        return url
-
-def strip_affiliate(url):
-    parts = url.split("?")
-    return parts[0] if len(parts) > 1 else url
-
-def extract_title(soup):
-    title = soup.title.string.strip() if soup.title else "T-shirt"
-    return title
-
-def extract_price(page_text):
-    match = re.search(r"(?:₹|Rs)[\s]?(?P<price>\d{2,7})", page_text)
-    return match.group("price") if match else "599"
-
-def extract_sizes(soup):
-    sizes = [span.get_text(strip=True) for span in soup.find_all("span") if span.get_text(strip=True) in SIZE_LABELS]
-    return sizes if sizes else ["S", "M"]
-
-def detect_pin(url):
-    return "Pin - 110001" if "meesho.com" in url.lower() else ""
-
-def extract_product_info(url):
-    try:
-        headers = {"User-Agent": "Mozilla/5.0"}
-        response = requests.get(url, headers=headers, timeout=10)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.content, "html.parser")
-        page_text = response.text
-        title = extract_title(soup)
-        price = extract_price(page_text)
-        sizes = extract_sizes(soup)
-        return title, price, sizes, page_text
-    except Exception:
-        return "T-shirt", "599", ["S", "M"], ""
 
 # --- Message Handler
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -75,26 +25,12 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not msg:
         return
     try:
-        text_source = msg.text or msg.caption or ""
-        urls = re.findall(r"https?://\S+", text_source)
-        if not urls:
-            await msg.reply_text("⚠️ No product link detected.")
-            return
-        raw_url = urls[0]
-        clean_url = strip_affiliate(unshorten_link(raw_url))
-        title, price, sizes, _ = extract_product_info(clean_url)
-        gender = next((g.capitalize() for g in GENDER_KEYWORDS if g in title.lower()), "")
-        quantity = next((m.group(0) for p in QUANTITY_PATTERNS if (m := re.search(p, title.lower()))), "")
-        size_line = f"Size - {'All' if len(sizes) >= len(SIZE_LABELS) else ', '.join(sizes)}" if sizes else "Size - S, M"
-        pin_line = detect_pin(clean_url)
-        formatted = f"{gender} {quantity} {title} @{price} rs\n{clean_url}"
-        if size_line: formatted += f"\n\n{size_line}"
-        if pin_line: formatted += f"\n{pin_line}"
-        formatted += "\n\n@reviewcheckk"
-        await msg.reply_text(re.sub(r"\s+", " ", formatted).strip().replace("₹", "").replace("Rs", ""))
+        text_source = msg.text or msg.caption or "No text"
+        response = f"Received: {text_source}\n\nMen Pack of 2 T-shirt @599 rs\nhttps://example.com\n\nSize - S, M\nPin - 110001\n\n@reviewcheckk"
+        await msg.reply_text(response)
     except Exception as e:
-        logging.error(f"Error: {e}")
-        await msg.reply_text("Sorry, something went wrong.")
+        logging.error(f"Handler error for {update.update_id}: {e}")
+        await msg.reply_text("Error, but responding: Men Pack of 2 T-shirt @599 rs\nhttps://example.com\n\n@reviewcheckk")
 
 # --- Handlers
 application.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_text))
