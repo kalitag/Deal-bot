@@ -177,6 +177,5 @@ def home():
     return "Deal-bot is running.", 200
 
 if __name__ == "__main__":
-    # This sets the webhook on bot start, but you only need to do this once!
     bot.set_webhook(WEBHOOK_URL)
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
