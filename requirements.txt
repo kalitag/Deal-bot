@@ -1,4 +1,4 @@
 Flask
 requests
-python-telegram-bot==20.6
+python-telegram-bot>=20.0
 beautifulsoup4
