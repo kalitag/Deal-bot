@@ -26,7 +26,8 @@ def unshorten_link(url):
     try:
         response = requests.get(url, timeout=5, allow_redirects=True)
         return response.url
-    except:
+    except Exception as e:
+        logger.error(f"Error unshortening link: {e}")
         return url
 
 # Scrape product info
@@ -48,7 +49,7 @@ def extract_product_info(url):
 
         return title, price, sizes
     except Exception as e:
-        logger.error(f"Error scraping: {e}")
+        logger.error(f"Error scraping product info: {e}")
         return None, None, []
 
 # Format message
@@ -76,9 +77,12 @@ async def handle_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
         formatted = format_deal(msg)
         if formatted:
             await context.bot.send_message(chat_id=GROUP_USERNAME, text=formatted)
+        else:
+            logger.info("No formatted message generated.")
 
 # Start bot polling
 def run_bot():
+    logger.info("Starting Telegram polling...")
     bot_app = ApplicationBuilder().token(TOKEN).build()
     bot_app.add_handler(MessageHandler(filters.FORWARDED & filters.TEXT, handle_forward))
     bot_app.run_polling()
