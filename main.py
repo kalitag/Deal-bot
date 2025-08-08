@@ -71,9 +71,9 @@ async def handle_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Run bot
 async def run_bot():
-    logger.info("Starting Telegram bot...")
+    logger.info("*** Starting Telegram bot ***")
     app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(MessageHandler(filters.TEXT, handle_forward))  # ✅ Changed filter
+    app.add_handler(MessageHandler(filters.TEXT, handle_forward))  # ✅ Accept all text messages
     await app.initialize()
     await app.start()
     await app.updater.start_polling()
