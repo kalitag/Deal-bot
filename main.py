@@ -1,39 +1,54 @@
-from telegram import Update
-from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
-import logging
+from flask import Flask, request
+from telegram import Update, Bot
+from telegram.ext import (
+    ApplicationBuilder, ContextTypes, MessageHandler, filters
+)
 import asyncio
 import os
-import threading
-from flask import Flask
 
-# Logging setup
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# ✅ Bot token and webhook URL
+BOT_TOKEN = "8465346144:AAGSHC77UkXVZZTUscbYItvJxgQbBxmFcWo"
+WEBHOOK_URL = f"https://deal-bot-255c.onrender.com/{BOT_TOKEN}"
 
-TOKEN = '8465346144:AAGSHC77UkXVZZTUscbYItvJxgQbBxmFcWo'
-GROUP_USERNAME = '@hathipandaa'
+# ✅ Flask app
+app = Flask(__name__)
+bot = Bot(BOT_TOKEN)
 
-app_web = Flask(__name__)
+# ✅ Telegram handler with forward check
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message:
+        print("✅ Received:", update.message.text)
+        if update.message.forward_date:
+            # 🔧 Placeholder for scraping logic
+            await update.message.reply_text("Forwarded product detected! 🔍")
+        else:
+            await update.message.reply_text("⚠️ Please forward a product link.")
 
-@app_web.route('/')
-def home():
-    return "Bot is running"
+# ✅ Telegram app setup
+application = ApplicationBuilder().token(BOT_TOKEN).build()
+application.add_handler(MessageHandler(filters.TEXT, handle_text))
 
-async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = update.message.text
-    logger.info(f"Received: {msg}")
-    await context.bot.send_message(chat_id=GROUP_USERNAME, text=f"Echo: {msg}")
+# ✅ Webhook route
+@app.route(f"/{BOT_TOKEN}", methods=["POST"])
+def telegram_webhook():
+    if request.method == "POST":
+        update = Update.de_json(request.get_json(force=True), bot)
+        asyncio.run(application.process_update(update))
+    return "ok"
 
-async def run_bot():
-    logger.info("*** Starting Echo Bot ***")
-    app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(MessageHandler(filters.TEXT, echo))
-    await app.initialize()
-    await app.start()
-    await app.updater.start_polling()
-    await app.updater.idle()
+# ✅ Health check route
+@app.route("/")
+def index():
+    return "Bot is running with webhook!"
 
-if __name__ == '__main__':
-    threading.Thread(target=lambda: asyncio.run(run_bot())).start()
+# ✅ Set webhook once
+async def set_webhook():
+    await bot.set_webhook(WEBHOOK_URL)
+    print("🚀 Webhook set!")
+
+# ✅ Start everything
+if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app_web.run(host='0.0.0.0', port=port)
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(set_webhook())
+    app.run(host="0.0.0.0", port=port)
