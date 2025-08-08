@@ -7,7 +7,7 @@ import re
 import logging
 import asyncio
 import os
-import threading  # ✅ Add this line
+import threading
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
@@ -24,7 +24,7 @@ app_web = Flask(__name__)
 def home():
     return "Bot is running"
 
-# Link unshortener
+# Unshorten link
 def unshorten_link(url):
     try:
         response = requests.get(url, timeout=5, allow_redirects=True)
@@ -33,7 +33,7 @@ def unshorten_link(url):
         logger.error(f"Unshorten error: {e}")
         return url
 
-# Scraper
+# Scrape product info
 def extract_product_info(url):
     try:
         headers = {'User-Agent': 'Mozilla/5.0'}
@@ -48,7 +48,7 @@ def extract_product_info(url):
         logger.error(f"Scraping error: {e}")
         return None, None, []
 
-# Formatter
+# Format message
 def format_deal(message_text):
     urls = re.findall(r'https?://\S+', message_text)
     if not urls:
@@ -60,10 +60,10 @@ def format_deal(message_text):
     size_line = "Available Sizes: " + ", ".join(sizes) if sizes else "Available Sizes: Not listed"
     return f"{title} @{price} rs\n{full_url}\n\n{size_line}\n\n@reviewcheckk"
 
-# Telegram handler
+# Handle messages
 async def handle_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.message.text
-    logger.info(f"Received: {msg}")
+    logger.info(f"Received message from {update.effective_user.username}: {msg}")
     if msg:
         formatted = format_deal(msg)
         if formatted:
@@ -73,7 +73,7 @@ async def handle_forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def run_bot():
     logger.info("Starting Telegram bot...")
     app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(MessageHandler(filters.FORWARDED & filters.TEXT, handle_forward))
+    app.add_handler(MessageHandler(filters.TEXT, handle_forward))  # ✅ Changed filter
     await app.initialize()
     await app.start()
     await app.updater.start_polling()
