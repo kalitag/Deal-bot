@@ -1,4 +1,10 @@
-python-telegram-bot>=20.0
-flask
+Flask
+python-telegram-bot==20.6
 requests
 beautifulsoup4
+lxml
+
+Advanced features for robust scraping and asynchronous tasks
+playwright==1.45.0
+celery==5.3.6
+redis==5.0.1
